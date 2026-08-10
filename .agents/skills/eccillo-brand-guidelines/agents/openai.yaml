@@ -1,0 +1,4 @@
+interface:
+  display_name: "Eccillo Brand Guidelines"
+  short_description: "Apply Eccillo brand styling"
+  default_prompt: "Apply the Eccillo brand guidelines to this design."

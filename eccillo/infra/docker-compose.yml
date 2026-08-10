@@ -1,0 +1,195 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: eccillo
+      POSTGRES_USER: eccillo
+      POSTGRES_PASSWORD: eccillo
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eccillo"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Queue-isolated local workers.  They remain opt-in so `docker compose up
+  # -d db` keeps the existing host-run Django workflow unchanged.  Start all
+  # workers plus Beat with: `docker compose --profile worker up`.
+  worker-interactive:
+    image: python:3.12-slim
+    working_dir: /app
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        pip install --disable-pip-version-check --no-cache-dir -r requirements.txt
+        && python -m celery -A config worker --loglevel=INFO --queues=interactive --hostname=interactive@%h
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.dev
+      DB_HOST: db
+      DB_PORT: "5432"
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ../backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - worker
+
+  worker-background:
+    image: python:3.12-slim
+    working_dir: /app
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        pip install --disable-pip-version-check --no-cache-dir -r requirements.txt
+        && python -m celery -A config worker --loglevel=INFO --queues=background --hostname=background@%h
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.dev
+      DB_HOST: db
+      DB_PORT: "5432"
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ../backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - worker
+
+  worker-analytics:
+    image: python:3.12-slim
+    working_dir: /app
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        pip install --disable-pip-version-check --no-cache-dir -r requirements.txt
+        && python -m celery -A config worker --loglevel=INFO --queues=analytics --hostname=analytics@%h
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.dev
+      DB_HOST: db
+      DB_PORT: "5432"
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ../backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - worker
+
+  worker-outbox:
+    image: python:3.12-slim
+    working_dir: /app
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        pip install --disable-pip-version-check --no-cache-dir -r requirements.txt
+        && python -m celery -A config worker --loglevel=INFO --queues=outbox --hostname=outbox@%h
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.dev
+      DB_HOST: db
+      DB_PORT: "5432"
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ../backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - worker
+
+  worker-proactive:
+    image: python:3.12-slim
+    working_dir: /app
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        pip install --disable-pip-version-check --no-cache-dir -r requirements.txt
+        && python -m celery -A config worker --loglevel=INFO --queues=proactive --hostname=proactive@%h
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.dev
+      DB_HOST: db
+      DB_PORT: "5432"
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ../backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - worker
+
+  beat:
+    image: python:3.12-slim
+    working_dir: /app
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        pip install --disable-pip-version-check --no-cache-dir -r requirements.txt
+        && python -m celery -A config beat --loglevel=INFO --schedule=/tmp/celerybeat-schedule
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.dev
+      DB_HOST: db
+      DB_PORT: "5432"
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ../backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - worker
+
+volumes:
+  pgdata:
