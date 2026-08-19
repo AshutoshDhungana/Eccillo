@@ -12,5 +12,5 @@ interface AppShellProps {
  * It deliberately delegates navigation to the same live shell as every workspace.
  */
 export function AppShell({ children, title }: AppShellProps) {
-  return <SharedAppShell tone="dark" title={title}>{children}</SharedAppShell>;
+  return <SharedAppShell title={title}>{children}</SharedAppShell>;
 }

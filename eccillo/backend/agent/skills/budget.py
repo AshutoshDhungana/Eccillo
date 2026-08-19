@@ -13,6 +13,7 @@ class BudgetSkill(Skill):
     description = "Allocate the total budget into per-category line items using event-type benchmarks."
     produces = ["budget_lines"]
     required_event_fields = ["event_type", "budget"]
+    reads = ["event_type", "budget", "guest_count", "currency"]
     allowed_states = {EventState.PLANNING, EventState.REVIEW}
 
     async def execute(self, ctx: SkillContext, payload: Any) -> tuple[dict[str, Any], list[str]]:

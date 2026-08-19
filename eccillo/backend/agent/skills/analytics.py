@@ -18,6 +18,7 @@ class AnalyticsSkill(Skill):
     description = "Score plan readiness, detect scheduling/budget conflicts, and surface risks."
     produces = ["risks"]
     required_event_fields = ["event_type"]
+    reads = ["event_type", "date", "budget", "currency", "guest_count", "timeline", "budget_lines", "vendors", "guests", "tasks"]
     allowed_states = None  # available in any state for status/summary
 
     async def execute(self, ctx: SkillContext, payload: Any) -> tuple[dict[str, Any], list[str]]:

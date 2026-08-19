@@ -4,16 +4,9 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from common.permissions import require_event_access
+from common.permissions import accessible_event as _event
 from .models import BudgetLineItem, Event, EventComment, Milestone, Risk, SeatingPlan, Task
 from .serializers import BudgetLineItemSerializer, EventCommentSerializer, EventListSerializer, EventSerializer, MilestoneSerializer, RiskSerializer, SeatingPlanSerializer, TaskSerializer
-
-
-def _event(request, event_id, write=False):
-    event = Event.objects.filter(id=event_id).first()
-    if event is None or not require_event_access(request, event, "write" if write else "read"):
-        return None
-    return event
 
 
 @api_view(["GET", "POST"])

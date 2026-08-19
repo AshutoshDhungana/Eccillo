@@ -10,19 +10,11 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from common.permissions import require_event_access
-from planning.models import Event
+from common.permissions import accessible_event as _event
 
 from .models import AgentEventState, AgentRun, AgentSession
 from .serializers import AgentRunSerializer, AgentSessionSerializer, AgentTurnSerializer
 from .tasks import run_agent_turn
-
-
-def _event(request, event_id, write=False):
-    event = Event.objects.filter(id=event_id).first()
-    if event is None or not require_event_access(request, event, "write" if write else "read"):
-        return None
-    return event
 
 
 @api_view(["GET", "POST"])
@@ -179,22 +171,35 @@ def agent_vendors(request, event_id):
         return Response({"detail": "Event access denied."}, status=status.HTTP_403_FORBIDDEN)
 
     from marketplace.models import Vendor
+    from procurement.models import Outreach
 
     sidecar = AgentEventState.objects.filter(event=event).first()
     refs = (sidecar.vendors if sidecar else []) or []
     ids = [r.get("vendor_id") for r in refs if r.get("vendor_id")]
     vendors = {str(v.id): v for v in Vendor.objects.filter(id__in=ids)}
 
+    # VendorRef.status has always documented "shortlisted | proposed | booked"
+    # while only ever holding the first. Derive the rest from procurement at read
+    # time rather than writing it back: the vendor skill rebuilds these refs with
+    # a hardcoded status on any re-run, and would silently revert a stored value.
+    contacted = dict(
+        Outreach.objects.filter(request__event=event, vendor_id__in=ids)
+        .exclude(status__in=["pending", "no_channel"])
+        .values_list("vendor_id", "status")
+    )
+
     results = []
     for r in refs:
         v = vendors.get(str(r.get("vendor_id")))
+        outreach_status = contacted.get(v.id) if v else None
         results.append({
             "vendor_id": r.get("vendor_id"),
             "name": r.get("name"),
             "category": r.get("category"),
             "score": r.get("score", 0),
             "reasons": r.get("reasons", []),
-            "status": r.get("status", "shortlisted"),
+            "status": "proposed" if outreach_status else r.get("status", "shortlisted"),
+            "outreach_status": outreach_status,
             "price_from_minor": v.price_from_minor if v else None,
             "currency": v.currency if v else None,
             "rating_avg": float(v.rating_avg) if v else None,

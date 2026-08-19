@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     # marketplace + AI orchestration (Phase 3)
     "marketplace.apps.MarketplaceConfig",
     "orchestration.apps.OrchestrationConfig",
+    "procurement.apps.ProcurementConfig",
 ]
 
 MIDDLEWARE = [
@@ -100,6 +101,9 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "common.pagination.EccilloCursorPagination",
     "PAGE_SIZE": 25,
     "EXCEPTION_HANDLER": "common.api.problem_exception_handler",
+    # Only the public procurement reply page opts into throttling today; the
+    # rate is here because DRF reads scopes from settings, not the decorator.
+    "DEFAULT_THROTTLE_RATES": {"anon": "30/hour"},
 }
 
 # Browser clients use these two optimistic-concurrency/retry headers for
@@ -124,6 +128,23 @@ def _env_positive_int(name: str, default: int) -> int:
 
 DOCUMENT_UPLOAD_MAX_BYTES = _env_positive_int("DOCUMENT_UPLOAD_MAX_BYTES", 25 * 1024 * 1024)
 
+# --- Outbound mail (procurement outreach) ---
+# SMTP is the default here on purpose: dev overrides it with the console backend
+# and tests with locmem. Defaulting to console *here* would make a production
+# deploy that forgets EMAIL_HOST silently drop every message instead of failing.
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
+EMAIL_PORT = _env_positive_int("EMAIL_PORT", 587)
+# Without this an unresponsive SMTP host blocks the sender forever.
+EMAIL_TIMEOUT = _env_positive_int("EMAIL_TIMEOUT", 10)
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = _env_bool("EMAIL_USE_TLS", True)
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Eccillo <no-reply@eccillo.dev>")
+
+# Public base URL for links we put in outbound mail (the vendor reply page).
+# Must be reachable by the recipient, so it is the web app's origin, not the API.
+PUBLIC_WEB_URL = os.environ.get("PUBLIC_WEB_URL", "http://localhost:5173").rstrip("/")
+
 # --- Celery (async agent turns) ---
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://localhost:6379/1")
@@ -138,6 +159,9 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_ROUTES = {
     "orchestration.run_agent_turn": {"queue": "interactive"},
     "orchestration.dispatch_outbox": {"queue": "outbox"},
+    # No compose worker consumes the default "celery" queue, so an unrouted
+    # task is enqueued and never picked up.
+    "procurement.send_outreach_batch": {"queue": "outbox"},
 }
 
 # Toggle live OSM venue/vendor discovery during agent turns.

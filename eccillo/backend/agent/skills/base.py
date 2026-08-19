@@ -52,6 +52,8 @@ class SkillResult:
     explanation: list[str] = field(default_factory=list)
     error: str | None = None
     retryable: bool = False
+    # Replayed from plan memory instead of executed this turn.
+    cached: bool = False
 
     @property
     def ok(self) -> bool:
@@ -64,6 +66,7 @@ class SkillResult:
             "data": self.data,
             "explanation": self.explanation,
             "error": self.error,
+            "cached": self.cached,
         }
 
 
@@ -80,6 +83,12 @@ class Skill(abc.ABC):
     required_event_fields: list[str] = []
     # StructuredEvent collections/fields this skill writes (used for DAG deps).
     produces: list[str] = []
+    # Every StructuredEvent field this skill's output depends on.  Defaults to
+    # ``required_event_fields``; declare explicitly when a skill reads more than
+    # it strictly requires.  Plan memory re-runs the skill when any of these
+    # change, so a field left out here means stale cached output.  Never list a
+    # field this skill also ``produces`` — that self-invalidates every turn.
+    reads: list[str] = []
     # Irreversible/outbound skills require explicit human approval (spec §Human Approval).
     requires_approval: bool = False
     # None == available in any state; otherwise gated to these states.
@@ -93,6 +102,11 @@ class Skill(abc.ABC):
     @classmethod
     def output_schema(cls) -> dict[str, Any]:
         return cls.output_model.model_json_schema() if cls.output_model else {"type": "object", "properties": {}}
+
+    @classmethod
+    def input_fields(cls) -> list[str]:
+        """Event fields whose value determines this skill's output."""
+        return cls.reads or cls.required_event_fields
 
     @classmethod
     def manifest(cls) -> dict[str, Any]:

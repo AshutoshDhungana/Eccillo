@@ -13,6 +13,7 @@ class GuestSkill(Skill):
     description = "Segment the guest list and reconcile headcount against capacity/budget."
     produces = ["guests"]
     required_event_fields = ["guest_count"]
+    reads = ["guest_count", "event_type"]
     allowed_states = {EventState.PLANNING, EventState.REVIEW}
 
     async def execute(self, ctx: SkillContext, payload: Any) -> tuple[dict[str, Any], list[str]]:

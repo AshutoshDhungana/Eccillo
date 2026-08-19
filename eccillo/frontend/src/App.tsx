@@ -7,7 +7,10 @@ import { PlanningPage } from "./pages/CorePages";
 import { NewEventPage } from "./pages/NewEventPage";
 import { CopilotPage } from "./pages/CopilotPage";
 import { ConversationalIntake } from "./pages/ConversationalIntake";
+import { EventSetupWizard } from "./pages/EventSetupWizard";
 import { VendorSuggestionsPage } from "./pages/VendorSuggestionsPage";
+import { ProcurementPage } from "./pages/ProcurementPage";
+import { RespondPage } from "./pages/RespondPage";
 import DesignedLandingPage from "./designed/app/pages/LandingPage";
 import DesignedLoginPage from "./designed/app/pages/Login";
 import DesignedSignupPage from "./designed/app/pages/Signup";
@@ -34,14 +37,18 @@ export default function App() {
     <Route path="/" element={<DesignedLandingPage />} />
     <Route path="/login" element={<DesignedLoginPage />} />
     <Route path="/signup" element={<DesignedSignupPage />} />
+    {/* Public: vendors/talent/sponsors answer an emailed request here, no account. */}
+    <Route path="/respond/:token" element={<RespondPage />} />
     <Route element={<ProtectedRoute />}>
       <Route path="/dashboard" element={<DesignedDashboardPage />} />
       <Route path="/events" element={<DesignedEventsPage />} />
       <Route path="/events/new" element={<ConversationalIntake />} />
       <Route path="/events/new/manual" element={<NewEventPage />} />
       <Route path="/events/new/brief" element={<Navigate to="/events/new" replace />} />
+      <Route path="/events/:eventId/setup" element={<EventSetupWizard />} />
       <Route path="/events/:eventId/copilot" element={<CopilotPage />} />
       <Route path="/events/:eventId/vendors" element={<VendorSuggestionsPage />} />
+      <Route path="/events/:eventId/procurement" element={<ProcurementPage />} />
       <Route path="/events/:eventId/planning/:tab" element={<PlanningPage />} />
       <Route path="/planning/:tab" element={<LegacyPlanningRedirect />} />
       <Route path="/brief" element={<Navigate to="/events/new" replace />} />

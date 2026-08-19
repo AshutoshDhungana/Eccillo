@@ -1,4 +1,8 @@
+/* Must stay first: bundlers inline the local @imports below, which would then
+   push a later @import past the rules they bring with them. */
+@import url("https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&family=Lora:wght@400..700&display=swap");
 @import "./designed/styles/fonts.css";
+@import "./designed/styles/eccillo-tokens.css";
 @import "tailwindcss";
 
 @font-face {
@@ -12,58 +16,65 @@
   src: local("Helvetica Neue"), local("Arial");
 }
 
+/* `color-scheme` is what makes scrollbars, form controls, autofill and the
+   caret follow the theme — none of which a colour utility can reach. */
+:root { color-scheme: dark; }
+:root[data-theme="light"] { color-scheme: light; }
+
 :root {
-  color: #FFFFFF;
-  background: #000000;
-  font-family: "Helvetica Now Display", Arial, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  font-family: var(--font-ui);
   font-synthesis: none;
 }
 
+/* Light-on-dark needs antialiased stems or the type looks bolded; dark-on-light
+   needs the default rendering or the same type looks anaemic. */
+:root { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+:root[data-theme="light"] { -webkit-font-smoothing: auto; -moz-osx-font-smoothing: auto; }
+
 * { box-sizing: border-box; }
-body { min-width: 320px; min-height: 100vh; margin: 0; background: #000000; color: #FFFFFF; }
+body { min-width: 320px; min-height: 100vh; margin: 0; background: var(--bg); color: var(--text); }
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .5; }
 
 .font-editorial {
-  font-family: "Georgia Pro", Georgia, serif;
+  font-family: var(--font-display);
   font-weight: 300;
   letter-spacing: -.03em;
 }
 
 .surface {
-  border: 1px solid rgb(217 217 217 / .18);
-  background: #141414;
-  box-shadow: 0 18px 50px rgb(0 0 0 / .32);
+  border: 1px solid var(--ring);
+  background: var(--panel);
+  box-shadow: var(--shadow);
 }
 
 .frosted {
-  border: 1px solid rgb(217 217 217 / .22);
-  background: rgb(20 20 20 / .78);
+  border: 1px solid var(--ring);
+  background: var(--panel-frost);
   backdrop-filter: blur(14px);
   box-shadow: 0 8px 28px rgb(0 0 0 / .1);
 }
 
 .focus-ring:focus-visible {
-  outline: 2px solid #D9D9D9;
+  outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 
-/* Eccillo's workspace is intentionally monochromatic. These aliases also
-   bring the supplied legacy screens into the same dark system while their
-   data-driven replacements are rendered. */
-.bg-white, .bg-\[\#F5F5F5\], .bg-\[\#F5F5F5\]\/60 { background-color: #141414 !important; }
-.bg-white\/55 { background-color: rgb(26 26 26 / .78) !important; }
-.bg-black\/5, .bg-black\/10, .bg-black\/\[\.04\] { background-color: rgb(255 255 255 / .07) !important; }
-.text-black { color: #FFFFFF !important; }
-.text-black\/75 { color: rgb(255 255 255 / .75) !important; }
-.text-black\/64 { color: rgb(255 255 255 / .64) !important; }
-.text-black\/55 { color: rgb(255 255 255 / .55) !important; }
-.text-black\/48 { color: rgb(255 255 255 / .48) !important; }
-.text-black\/45, .text-black\/40, .text-black\/35 { color: rgb(255 255 255 / .4) !important; }
-.border-black\/10, .border-black\/15 { border-color: rgb(217 217 217 / .18) !important; }
-.hover\:bg-black\/5:hover { background-color: #1A1A1A !important; }
-.text-red-600, .text-emerald-700 { color: rgb(255 255 255 / .72) !important; }
+/* Eccillo's workspace is intentionally monochromatic. These aliases bring the
+   supplied light-authored legacy screens onto the themed surface tokens, so
+   they follow the light/dark toggle like the rest of the workspace. */
+.bg-white, .bg-\[\#F5F5F5\], .bg-\[\#F5F5F5\]\/60 { background-color: var(--panel) !important; }
+.bg-white\/55 { background-color: var(--panel-frost) !important; }
+.bg-black\/5, .bg-black\/10, .bg-black\/\[\.04\] { background-color: var(--fill-subtle) !important; }
+.text-black { color: var(--text) !important; }
+.text-black\/75, .text-black\/64, .text-black\/55 { color: var(--text2) !important; }
+.text-black\/48, .text-black\/45, .text-black\/40, .text-black\/35 { color: var(--text3) !important; }
+.border-black\/10, .border-black\/15 { border-color: var(--ring) !important; }
+.hover\:bg-black\/5:hover { background-color: var(--btnGhost) !important; }
+.text-red-600, .text-emerald-700 { color: var(--text2) !important; }
 
 /* The landing and auth screens are imported design artifacts. Keep their
    supplied white controls and black foregrounds intact instead of applying

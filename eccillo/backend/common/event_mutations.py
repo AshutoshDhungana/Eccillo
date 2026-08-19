@@ -18,21 +18,36 @@ from typing import Any
 
 from django.db import transaction
 from django.db.models import F
+from rest_framework.exceptions import APIException
 
 from .api import emit
 from .models import DomainEvent
 
 
-class EventMutationError(RuntimeError):
-    """Base error for a rejected event mutation."""
+class EventMutationError(APIException):
+    """Base error for a rejected event mutation.
+
+    An ``APIException`` rather than a bare ``RuntimeError`` so the HTTP layer
+    reports a refused mutation as a conflict instead of a 500 — DRF's handler
+    (and therefore ``problem_exception_handler``) ignores non-API exceptions.
+    """
+
+    status_code = 409
+    default_detail = "The event mutation was rejected."
 
 
 class EventRevisionConflict(EventMutationError):
     """Raised when a caller attempts to apply a stale event revision."""
 
+    status_code = 412
+    default_detail = "The event changed after this mutation was prepared."
+
 
 class EventMutationIdempotencyConflict(EventMutationError):
     """Raised when a business key was reused for a different event mutation."""
+
+    status_code = 409
+    default_detail = "idempotency_key was already used for another event mutation."
 
 
 @dataclass(frozen=True)

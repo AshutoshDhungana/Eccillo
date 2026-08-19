@@ -152,6 +152,74 @@ class WorkflowEngineTests(unittest.TestCase):
         self.assertIn("blocked", results["tasks"].error)
 
 
+class PlanMemoryTests(unittest.TestCase):
+    """The DAG must not re-run steps whose inputs are unchanged."""
+
+    def _planned_session(self):
+        engine = ConversationEngine(fake_runtime())
+        session = engine.start_session(organization_id="o", user_id="u")
+        run(engine.send(session.session_id, "Plan a conference"))
+        run(engine.send(session.session_id, "200 guests"))
+        run(engine.send(session.session_id, "on 2026-09-15 in Kathmandu"))
+        resp = run(engine.send(session.session_id, "Call it DevWeek with a budget of 5000000"))
+        self.assertEqual(resp.state, EventState.REVIEW.value)
+        self.assertFalse(any(r["cached"] for r in resp.results.values()))  # first run executes
+        return engine, session
+
+    def test_unchanged_turn_replays_every_step(self):
+        engine, session = self._planned_session()
+        before = engine.event(session.session_id)
+
+        resp = run(engine.send(session.session_id, "plan it out"))
+
+        self.assertEqual(len(resp.results), 10)  # the full DAG was still selected…
+        self.assertTrue(all(r["cached"] for r in resp.results.values()))  # …and none of it ran
+        self.assertEqual(resp.observability["counters"].get("skill_cached"), 10)
+        # Cached steps still carry their grounded output, so the reply is unchanged.
+        self.assertIn("readiness", resp.results["analytics"]["data"])
+        # And re-running no longer duplicates append-only state.
+        after = engine.event(session.session_id)
+        self.assertEqual(len(after.notes), len(before.notes))
+        self.assertEqual(len(after.risks), len(before.risks))
+
+    def test_changed_input_invalidates_only_dependent_steps(self):
+        engine, session = self._planned_session()
+
+        resp = run(engine.send(session.session_id, "raise the budget to 8000000"))
+        cached = {sid: r["cached"] for sid, r in resp.results.items()}
+
+        # Budget changed → budget and everything reading it re-runs.
+        self.assertFalse(cached["budget"])
+        self.assertFalse(cached["venue"])
+        self.assertFalse(cached["vendor"])
+        self.assertFalse(cached["analytics"])
+        # Timeline/guest inputs are untouched → replayed.
+        self.assertTrue(cached["timeline"])
+        self.assertTrue(cached["tasks"])
+        self.assertTrue(cached["guest"])
+
+    def test_wiped_output_forces_a_rerun(self):
+        """Deleting AI-produced rows out from under the cache re-derives them."""
+        engine, session = self._planned_session()
+        event_id = engine.event(session.session_id).event_id
+        engine.runtime.state.replace(event_id, "timeline", [])
+
+        resp = run(engine.send(session.session_id, "plan it out"))
+        self.assertFalse(resp.results["timeline"]["cached"])
+        self.assertTrue(engine.event(session.session_id).timeline)
+
+    def test_disabled_by_config(self):
+        rt = AgentRuntime(config=AgentConfig(plan_memory=False), llm=FakeLLM())
+        engine = ConversationEngine(rt)
+        session = engine.start_session(organization_id="o", user_id="u")
+        run(engine.send(session.session_id, "Plan a conference"))
+        run(engine.send(session.session_id, "200 guests"))
+        run(engine.send(session.session_id, "on 2026-09-15 in Kathmandu"))
+        run(engine.send(session.session_id, "Call it DevWeek with a budget of 5000000"))
+        resp = run(engine.send(session.session_id, "plan it out"))
+        self.assertFalse(any(r["cached"] for r in resp.results.values()))
+
+
 class ConversationIntegrationTests(unittest.TestCase):
     def test_full_conversation_reaches_review_then_booking(self):
         engine = ConversationEngine(fake_runtime())

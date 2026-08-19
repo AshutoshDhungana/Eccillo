@@ -237,6 +237,9 @@ class AgentRuntime:
             observer=observer,
             make_context=make_context,
             config=self.config,
+            memory=self.memory,
+            organization_id=org_id,
+            user_id=user_id,
         )
         results = await engine.execute(plan)
 
@@ -275,7 +278,7 @@ class AgentRuntime:
         def make_context(skill_name: str, inputs: dict[str, Any]) -> SkillContext:
             return SkillContext(event_id=event_id, state=self.state, memory=self.memory, llm=self.llm, backend=self.backend, observer=observer, organization_id=org_id, user_id=user_id, inputs=inputs)
 
-        engine = WorkflowEngine(registry=self.registry, policy=self.policy, state_manager=self.state, event_id=event_id, observer=observer, make_context=make_context, config=self.config)
+        engine = WorkflowEngine(registry=self.registry, policy=self.policy, state_manager=self.state, event_id=event_id, observer=observer, make_context=make_context, config=self.config, memory=self.memory, organization_id=org_id, user_id=user_id)
         engine.approved = set(skills)  # grant approval for exactly these skills
         results = await engine.execute(plan)
 

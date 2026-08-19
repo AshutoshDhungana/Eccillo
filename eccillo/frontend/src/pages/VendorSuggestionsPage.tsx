@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Check, ExternalLink, MapPin, Phone, Sparkles } from "lucide-react";
+import { Check, ExternalLink, MapPin, Phone, Send, Sparkles } from "lucide-react";
 import { AppShell } from "../components/AppShell";
 import { agentApi } from "../api/agent";
+import { procurementApi } from "../api/procurement";
 import { planningApi } from "../api/planning";
 import type { VendorSuggestion } from "../types/agent";
 
@@ -17,8 +18,10 @@ export function VendorSuggestionsPage() {
   const event = useQuery({ queryKey: ["event", eventId], queryFn: () => planningApi.getEvent(eventId), enabled: !!eventId });
   const vendors = useQuery({ queryKey: ["agent-vendors", eventId], queryFn: () => agentApi.getVendors(eventId), enabled: !!eventId });
 
+  const navigate = useNavigate();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Pre-select the AI's suggestions; the user can deselect.
   useEffect(() => {
@@ -28,6 +31,33 @@ export function VendorSuggestionsPage() {
   const save = useMutation({
     mutationFn: () => agentApi.shortlist(eventId, [...selected]),
     onSuccess: () => setSaved(true),
+  });
+
+  /**
+   * Selecting vendors starts procurement. One request per category — you do not
+   * ask a caterer to quote for a venue — so a multi-category selection lands on
+   * the list of drafts, and the common single-category case goes straight to it.
+   */
+  const requestQuotes = useMutation({
+    mutationFn: async () => {
+      const byCategory = new Map<string, string[]>();
+      (vendors.data?.vendors ?? [])
+        .filter((v) => selected.has(v.vendor_id))
+        .forEach((v) => byCategory.set(v.category, [...(byCategory.get(v.category) ?? []), v.vendor_id]));
+
+      // Keep the shortlist in step; it is the record of what the user picked.
+      await agentApi.shortlist(eventId, [...selected]);
+      const drafts = [];
+      for (const [category, vendor_ids] of byCategory) {
+        drafts.push(await procurementApi.createRequest(eventId, { category, vendor_ids }));
+      }
+      return drafts;
+    },
+    onSuccess: (drafts) => {
+      const to = `/events/${eventId}/procurement`;
+      navigate(drafts.length === 1 ? `${to}?request=${drafts[0].id}` : to);
+    },
+    onError: (e: Error) => setError(e.message),
   });
 
   const groups = useMemo(() => {
@@ -42,6 +72,7 @@ export function VendorSuggestionsPage() {
       if (next.has(id)) next.delete(id);
       else next.add(id);
       setSaved(false);
+      setError(null);
       return next;
     });
 
@@ -56,7 +87,8 @@ export function VendorSuggestionsPage() {
           </p>
           <h1 className="font-editorial text-4xl leading-tight sm:text-5xl">Choose your vendors</h1>
           <p className="mt-3 max-w-lg text-white/55">
-            The Copilot shortlisted these venues and vendors near your event. Pick the ones you want, then save your shortlist.
+            The Copilot shortlisted these venues and vendors near your event. Pick the ones you want and we will
+            approach them with your brief — you will see their quotes come back as leads.
           </p>
         </header>
 
@@ -88,17 +120,28 @@ export function VendorSuggestionsPage() {
       {list.length > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-black/85 backdrop-blur lg:pl-[300px]">
           <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-4 py-3 sm:px-8">
-            <span className="text-sm text-white/60">{selected.size} selected</span>
+            <span className="text-sm text-white/60">
+              {error ? <span className="text-rose-300">{error}</span> : `${selected.size} selected`}
+            </span>
             <div className="flex items-center gap-3">
               {saved && <span className="text-sm text-emerald-300">Shortlist saved ✓</span>}
               <button
                 type="button"
-                disabled={selected.size === 0 || save.isPending}
+                disabled={selected.size === 0 || save.isPending || requestQuotes.isPending}
                 onClick={() => save.mutate()}
-                className="focus-ring inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm text-black transition disabled:opacity-40"
+                className="focus-ring inline-flex items-center gap-2 rounded-full border border-white/25 px-4 py-2.5 text-sm text-white/80 transition hover:bg-white/10 disabled:opacity-40"
               >
                 <Check size={16} />
-                {save.isPending ? "Saving…" : "Save shortlist"}
+                {save.isPending ? "Saving…" : "Save for later"}
+              </button>
+              <button
+                type="button"
+                disabled={selected.size === 0 || requestQuotes.isPending}
+                onClick={() => requestQuotes.mutate()}
+                className="focus-ring inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm text-black transition disabled:opacity-40"
+              >
+                <Send size={16} />
+                {requestQuotes.isPending ? "Preparing…" : "Request quotes"}
               </button>
             </div>
           </div>

@@ -62,6 +62,17 @@ class MemoryService:
     def event_snapshot(self, event_id: str) -> dict[str, Any]:
         return self.state_manager.get(event_id).snapshot()
 
+    # -- plan memory (per-event, per-skill execution record) -----------------
+    # What each skill last produced and the fingerprint of the inputs it saw.
+    # Lets the workflow engine replay an unchanged step instead of re-running
+    # the whole DAG on every message.  Same store as org/user memory, so it
+    # survives across worker processes with no new table.
+    def plan_memory(self, event_id: str) -> dict[str, Any]:
+        return self.store.get_all(f"plan:{event_id}")
+
+    def remember_plan(self, event_id: str, entries: dict[str, Any]) -> None:
+        self.store.update(f"plan:{event_id}", entries)
+
     # -- organization memory -------------------------------------------------
     def org_memory(self, organization_id: str | None) -> dict[str, Any]:
         if not organization_id:

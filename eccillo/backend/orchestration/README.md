@@ -1,8 +1,10 @@
-# Orchestration — AI Agent Integration (Phase 3)
+# Orchestration — AI Agent Integration
 
-Wires the **frozen** `agent/` package into Django. The agent is never modified;
-this app implements its interfaces (`contracts.md`) and exposes an async
-Conversation API.
+The **only** place the `agent/` package is wired into Django. `agent/` has no
+Django imports; this app implements its abstract ports against the ORM, persists
+conversation and run state, and exposes an async Conversation API. Anything that
+looks like it needs a Django import inside `agent/` is an adapter concern and
+belongs here.
 
 ## Architecture
 
@@ -29,8 +31,44 @@ GET  /events/{id}/agent/runs/{run_id} ──┘  (poll status/steps/result)
 | GET | `/api/v1/events/{event_id}/agent/sessions/{sid}/messages` | Transcript |
 | POST | `/api/v1/events/{event_id}/agent/sessions/{sid}/approve` | Approve gated actions → executes them |
 | GET | `/api/v1/events/{event_id}/agent/state` | Current structured-event snapshot |
+| POST | `/api/v1/events/{event_id}/agent/plan/approve` | Approve the plan and advance the workflow |
+| GET | `/api/v1/events/{event_id}/agent/vendors` | AI vendor shortlist joined with marketplace data |
+| POST | `/api/v1/events/{event_id}/agent/shortlist` | Persist the user's vendor selection (no outreach) |
 
 `message` accepts an optional `session_id`; omit it to auto-open a session.
+Outreach lives in the `procurement` app, not here.
+
+## StructuredEvent ↔ ORM mapping
+
+`DjangoEventStateStore` is a hybrid: canonical fields go to the real planning
+tables, agent-only collections to the `AgentEventState` sidecar.
+
+| StructuredEvent | Backend home |
+|---|---|
+| `title, event_type, description, currency` | `planning.Event` |
+| `date, end_date → starts_at, ends_at` | `planning.Event` |
+| `guest_count → expected_attendees` | `planning.Event` |
+| `budget → budget_target_minor` | `planning.Event` |
+| `location, venue` | `planning.Event.location` (JSON) |
+| `status` (EventState) | `planning.Event.status` via `agent.state.BACKEND_STATUS_MAP` |
+| `timeline[]` | `planning.Milestone` |
+| `tasks[]` | `planning.Task` |
+| `budget_lines[]` | `planning.BudgetLineItem` |
+| `risks[]` | `planning.Risk` |
+| `requirements, vendors, guests, notes, timeline meta` | `orchestration.AgentEventState` (JSON sidecar) |
+
+`AgentMemory` backs the agent's key-value memory store under three scopes:
+`org:<uuid>`, `user:<uuid>`, and `plan:<event_id>` (the per-skill execution
+record the workflow engine replays instead of re-running the DAG).
+
+## Ephemeral state, rehydrated per turn
+
+The agent keeps two things in-process; because every turn runs in a fresh worker
+process, `run_agent_turn` restores both first, through public APIs:
+
+1. **Conversation memory** — replay persisted `AgentTurn`s via `memory.add_turn(...)`.
+2. **Pending approvals** — restore `runtime._pending[session_id]` from
+   `AgentSession.pending_approvals` so an `approve` turn can execute the gated skills.
 
 ## Run it
 
@@ -71,6 +109,10 @@ Venue/vendor ports query the `marketplace` app and, when `AGENT_DISCOVERY_ENABLE
 location (Nominatim + Overpass), persisted into `marketplace.Vendor` and cached.
 Talent/sponsor are mapped to vendor categories where possible; true
 talent/sponsor discovery is deferred. See `orchestration/discovery/`.
+
+Known cost: this runs **inline in the turn**, so a user's message blocks on two
+public endpoints. It belongs in its own task keyed on location+category — the
+`VendorDiscoveryLog` TTL cache already makes that safe.
 
 ## Tests
 ```bash

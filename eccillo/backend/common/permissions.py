@@ -39,3 +39,17 @@ def require_event_access(request, event, capability="read"):
     if role in ["owner", "admin", "manager"]:
         return True
     return request.membership.permission_grants.filter(resource_type="event", resource_id=event.id, capability=capability).exists()
+
+
+def accessible_event(request, event_id, write=False):
+    """Load an event the caller may touch, or ``None``.
+
+    Every event-scoped view needs exactly this; it lived as a private copy in
+    each app's views module.  Callers turn ``None`` into their own 403.
+    """
+    from planning.models import Event
+
+    event = Event.objects.filter(id=event_id).first()
+    if event is None or not require_event_access(request, event, "write" if write else "read"):
+        return None
+    return event

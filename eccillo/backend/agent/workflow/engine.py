@@ -7,6 +7,8 @@ engine, which:
 * runs independent steps **concurrently** (bounded by ``max_concurrency``),
 * respects declared dependencies,
 * checks each step against the :class:`PolicyEngine` (deny / require-approval),
+* replays steps whose inputs are unchanged from **plan memory** instead of
+  re-running them,
 * retries transient (``RETRYABLE_ERROR``) failures,
 * blocks steps whose dependencies failed instead of cascading errors,
 * records everything on the :class:`Observer`.
@@ -17,6 +19,8 @@ It returns a map of ``step_id -> SkillResult`` and never raises.
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -51,6 +55,28 @@ class ExecutionPlan:
 ContextFactory = Callable[[str, dict[str, Any]], SkillContext]
 
 
+def _digest(payload: Any) -> str:
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, default=str).encode()).hexdigest()[:16]
+
+
+def _sizes(fields: list[str], snapshot: dict[str, Any]) -> dict[str, int]:
+    """How much each produced field currently holds (0 == gone)."""
+    out: dict[str, int] = {}
+    for name in fields:
+        value = snapshot.get(name)
+        out[name] = len(value) if isinstance(value, (list, dict, str)) else int(bool(value))
+    return out
+
+
+def _outputs_intact(cached: dict[str, int], current: dict[str, int]) -> bool:
+    """A cached step is only reusable while the state it wrote is still there.
+
+    Only fields that *had* content are checked — a skill that legitimately
+    produced nothing (no weather advisory, so no risks) stays cacheable.
+    """
+    return all(current.get(name, 0) > 0 for name, count in cached.items() if count > 0)
+
+
 class WorkflowEngine:
     def __init__(
         self,
@@ -62,6 +88,9 @@ class WorkflowEngine:
         observer: Observer,
         make_context: ContextFactory,
         config: AgentConfig,
+        memory: Any = None,  # MemoryService; None disables plan memory
+        organization_id: str | None = None,
+        user_id: str | None = None,
     ):
         self.registry = registry
         self.policy = policy
@@ -71,6 +100,15 @@ class WorkflowEngine:
         self.make_context = make_context
         self.config = config
         self._sem = asyncio.Semaphore(max(1, config.max_concurrency))
+        # Plan memory: read once per run (one store round-trip), written back once
+        # at the end.  Org/user memory is folded into every fingerprint because
+        # skills read it (standing requirements, preferred vendors, writing style).
+        self.memory = memory if (memory is not None and config.plan_memory) else None
+        self._memo: dict[str, Any] = self.memory.plan_memory(event_id) if self.memory else {}
+        self._memo_salt = (
+            _digest(self.memory.relevant(organization_id=organization_id, user_id=user_id)) if self.memory else ""
+        )
+        self._memo_writes: dict[str, Any] = {}
         # Steps that reached an approval gate this run (surfaced to the user).
         self.pending_approvals: list[dict[str, Any]] = []
         # Skills for which human approval has already been granted this run.
@@ -97,6 +135,8 @@ class WorkflowEngine:
                 for step_id, result in wave:
                     results[step_id] = result
                     done.add(step_id)
+        if self._memo_writes and self.memory is not None:
+            self.memory.remember_plan(self.event_id, self._memo_writes)
         return results
 
     async def _run_or_block(self, step: PlanStep, results: dict[str, SkillResult]) -> tuple[str, SkillResult]:
@@ -119,7 +159,39 @@ class WorkflowEngine:
             self.pending_approvals.append({"skill": step.skill, "inputs": step.inputs, "reason": decision.reason})
             return step.id, SkillResult(step.skill, Outcome.NEEDS_APPROVAL, error=decision.reason, data={"pending": step.inputs})
 
-        return step.id, await self._run_with_retries(skill, step)
+        # Plan memory. Skills that produce no event state (email, notification)
+        # are side effects, never replayed.
+        if self.memory is None or not skill.produces:
+            return step.id, await self._run_with_retries(skill, step)
+
+        snapshot = self.state.get(self.event_id).snapshot()
+        fingerprint = _digest({
+            "salt": self._memo_salt,
+            "version": skill.version,
+            "inputs": step.inputs,
+            "reads": {f: snapshot.get(f) for f in skill.input_fields()},
+        })
+        entry = self._memo.get(step.skill) or {}
+        if entry.get("fingerprint") == fingerprint and _outputs_intact(entry.get("sizes") or {}, _sizes(skill.produces, snapshot)):
+            self.observer.incr("skill_cached")
+            return step.id, SkillResult(
+                step.skill,
+                Outcome.SUCCESS,
+                data=entry.get("data") or {},
+                explanation=list(entry.get("explanation") or []),
+                cached=True,
+            )
+
+        result = await self._run_with_retries(skill, step)
+        if result.ok:
+            self._memo_writes[step.skill] = {
+                "fingerprint": fingerprint,
+                "data": result.data,
+                "explanation": result.explanation,
+                # Recorded after the run, so it reflects what this skill wrote.
+                "sizes": _sizes(skill.produces, self.state.get(self.event_id).snapshot()),
+            }
+        return step.id, result
 
     async def _run_with_retries(self, skill: Any, step: PlanStep) -> SkillResult:
         attempts = 0

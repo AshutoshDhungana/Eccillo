@@ -13,6 +13,7 @@ class LogisticsSkill(Skill):
     description = "Assess weather, transport, and accommodation logistics; raise advisories as risks."
     produces = ["risks", "notes"]
     required_event_fields = ["date"]
+    reads = ["date", "location", "venue", "guest_count"]
     allowed_states = {EventState.PLANNING, EventState.REVIEW}
 
     async def execute(self, ctx: SkillContext, payload: Any) -> tuple[dict[str, Any], list[str]]:

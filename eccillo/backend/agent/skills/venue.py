@@ -13,6 +13,9 @@ class VenueRecommendationSkill(Skill):
     description = "Recommend and rank venues that fit capacity, budget, and location, with reasons."
     produces = ["vendors"]  # venues are stored as vendor refs with category='venue'
     required_event_fields = ["event_type", "guest_count"]
+    # 'vendors' is deliberately absent: this skill only rewrites its own
+    # category slice, so reading it back would self-invalidate every turn.
+    reads = ["event_type", "guest_count", "budget", "location", "venue", "date"]
     allowed_states = {EventState.PLANNING, EventState.REVIEW}
 
     async def execute(self, ctx: SkillContext, payload: Any) -> tuple[dict[str, Any], list[str]]:

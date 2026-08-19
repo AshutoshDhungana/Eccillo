@@ -16,6 +16,7 @@ class VendorRecommendationSkill(Skill):
     description = "For each required category, recommend the best-matching vendor with an explainable score."
     produces = ["vendors"]
     required_event_fields = ["event_type", "budget"]
+    reads = ["event_type", "budget", "requirements", "budget_lines", "date"]
     allowed_states = {EventState.PLANNING, EventState.REVIEW}
 
     async def execute(self, ctx: SkillContext, payload: Any) -> tuple[dict[str, Any], list[str]]:

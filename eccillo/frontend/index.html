@@ -4,6 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Eccillo — AI Event OS</title>
+    <!-- Set before first paint so a light-theme reload never flashes dark.
+         Mirrors readTheme() in src/hooks/useTheme.ts. -->
+    <script>
+      document.documentElement.dataset.theme =
+        localStorage.getItem("eccillo-theme") ||
+        (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+    </script>
   </head>
   <body>
     <div id="root"></div>

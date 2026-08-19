@@ -42,10 +42,12 @@ class AgentEventState(BaseModel):
 
 
 class AgentMemory(BaseModel):
-    """Backs ``agent.memory.KeyValueMemoryStore`` (org + user memory tiers).
+    """Backs ``agent.memory.KeyValueMemoryStore`` (org, user, and plan tiers).
 
-    ``scope`` is the agent-supplied namespace, e.g. ``"org:<uuid>"`` or
-    ``"user:<uuid>"``; ``data`` is the free-form preference bag for that scope.
+    ``scope`` is the agent-supplied namespace, e.g. ``"org:<uuid>"``,
+    ``"user:<uuid>"``, or ``"plan:<event_id>"``; ``data`` is the free-form bag
+    for that scope (preferences, or the per-skill execution record the workflow
+    engine replays instead of re-running the DAG).
     """
 
     scope = models.CharField(max_length=200, unique=True)

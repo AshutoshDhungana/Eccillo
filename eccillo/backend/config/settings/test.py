@@ -9,3 +9,7 @@ CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
 GOOGLE_CALENDAR_ENABLED = False
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+
+# Every test hits the API from the same address, so the public reply page's
+# anon throttle would eventually start failing unrelated tests.
+REST_FRAMEWORK = {**REST_FRAMEWORK, "DEFAULT_THROTTLE_RATES": {"anon": None}}

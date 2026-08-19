@@ -4,9 +4,9 @@ const base = "focus-ring inline-flex items-center justify-center gap-2 rounded-f
 
 export function Button({ variant = "primary", className = "", ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "quiet" }) {
   const style = variant === "primary"
-    ? "border border-white/20 bg-[#141414] text-white hover:bg-[#1A1A1A]"
+    ? "border border-white/20 bg-[var(--panel)] text-white hover:bg-[var(--btnGhost)]"
     : variant === "secondary"
-      ? "border border-white/20 bg-[#141414] text-white/80 hover:bg-[#1A1A1A]"
+      ? "border border-white/20 bg-[var(--panel)] text-white/80 hover:bg-[var(--btnGhost)]"
       : "text-white/64 hover:bg-white/10";
   return <button type="submit" className={base + " " + style + " " + className} {...props} />;
 }

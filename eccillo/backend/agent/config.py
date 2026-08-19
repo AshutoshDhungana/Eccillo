@@ -73,6 +73,10 @@ class AgentConfig:
 
     # --- Orchestration ---
     max_concurrency: int = field(default_factory=lambda: _env_int("AGENT_MAX_CONCURRENCY", 4))
+    # Replay unchanged workflow steps from plan memory instead of re-running
+    # them.  Kill switch for when a cached step is suspected of serving stale
+    # output (set AGENT_PLAN_MEMORY=0).
+    plan_memory: bool = field(default_factory=lambda: _env("AGENT_PLAN_MEMORY", "1").lower() not in {"0", "false", "no", "off"})
     max_skill_retries: int = field(default_factory=lambda: _env_int("AGENT_MAX_SKILL_RETRIES", 2))
     conversation_window: int = field(default_factory=lambda: _env_int("AGENT_CONVERSATION_WINDOW", 12))
 

@@ -22,7 +22,7 @@ interface EventCardProps {
 export function EventCard({ event, variant = "event", onAction, onDelete, deleting = false }: EventCardProps) {
   if (variant === "create") {
     return (
-      <div className="flex flex-col overflow-hidden rounded-[20px] border border-white/10 bg-[#141414]">
+      <div className="flex flex-col overflow-hidden rounded-[20px] border border-white/10 bg-[var(--panel)]">
         <div className="relative h-[180px] w-full overflow-hidden">
           {event?.image && (
             <ImageWithFallback

@@ -1,22 +1,21 @@
----
-name: eccillo-brand-guidelines
-description: Enforces the Eccillo brand system — atmospheric AI palette (neutrals + sky blues + aurora gradients), Georgia Pro + Helvetica Now Display typography, pill-shaped UI, and cinematic editorial aesthetic. Use when creating or editing any Eccillo design.
----
-<!-- type: custom-skill -->
 # Eccillo Brand Guidelines
 
-Apply these rules to every Eccillo design. The brand is an Atmospheric AI identity — black for foundation and premium feel, white for clarity and editorial typography, blue for planning and trust, violet for intelligence and AI, pink/red for creativity and events.
+A study in restraint and editorial clarity.
 
-## Typography — Two-Typeface System
+Eccillo pairs organic editorial typography with ultra-refined, pill-shaped UI elements. By utilizing monochromatic restraint, generous negative space, and frosted glass interactions, the brand delivers a digital environment of quiet luxury.
+
+Apply these rules to every Eccillo design.
+
+## Typography — The Two-Typeface System
 
 **Georgia Pro (Serif Display)**
 - Role: Hero headlines and conceptual section introductions
 - Weights: Light for standard display, Light Italic for emphasis words
 - Tracking: -3%
-- Character: Generous x-height, organic curves, elegant true italics
+- Character: Generous x-height, organic curves, elegant true italics. Used with high contrast to draw emotional focus.
 
 **Helvetica Now Display (Sans-Serif UI)**
-- Role: All UI — menus, captions, buttons, forms, metadata
+- Role: All UI components — menus, captions, action states, buttons, forms, utility metadata
 - Tracking: Default (0%)
 - Size scale:
   - 40px Light (130% line-height) — subheadlines, descriptive body
@@ -24,100 +23,38 @@ Apply these rules to every Eccillo design. The brand is an Atmospheric AI identi
   - 24px Regular — navigation buttons
   - 20px Regular — log in / signup actions
 
-Never mix additional typefaces. The serif + sans-serif pairing creates editorial contrast — Georgia Pro draws emotional focus, Helvetica Now Display keeps data clean.
+Never mix additional typefaces. The serif + sans-serif pairing creates editorial contrast — Georgia Pro draws emotional focus, Helvetica Now Display keeps data clean and functional.
 
-## Color Palette — Cinematic Editorial Palette
+## Color Palette — Monochromatic Restraint
 
-### Core Neutrals
-
-| Name | Hex | Usage |
-|---|---|---|
-| Primary Black | #000000 | Hero backgrounds, primary CTAs |
-| Surface Black | #111111 | Cards, modals, footer |
-| Elevated Surface | #1A1A1A | Secondary containers |
-| Border Dark | #2A2A2A | Dividers, subtle borders |
-| Soft Gray | #707070 | Disabled text, secondary labels |
-| Light Gray | #D8D8D8 | Icons, inactive buttons |
-| Off White | #F5F5F5 | Cards, subtle backgrounds |
-| Pure White | #FFFFFF | Main text on dark surfaces |
-
-### Brand Atmosphere
-
-These are the colors that make Eccillo memorable.
+The palette is intentionally minimal. Hierarchy is built through opacity, not additional hues.
 
 | Name | Hex | Usage |
 |---|---|---|
-| Horizon Blue | #4FA7FF | Primary brand color |
-| Sky Blue | #74C3FF | Hover states |
-| Ocean Blue | #2F73FF | Highlights |
-| Aurora Violet | #7C4DFF | AI features |
-| Aurora Purple | #A44EFF | Copilot accents |
-| Aurora Pink | #F54E9E | Gradient highlights |
-| Aurora Red | #FF3A4A | Important emphasis |
-| Sunset Peach | #FFA76C | Warm accent |
-| Cloud White | #F9FBFF | Light hero backgrounds |
+| Primary Black | #000000 | Used at 100% for main CTAs and 64% opacity for body copy |
+| Pure White | #FFFFFF | The default page background and high-contrast CTA surface |
+| Off-White | #F5F5F5 | Page element backgrounds and subtle input fields |
+| Light Gray | #D9D9D980 | Accent borders, navigation highlights, and semi-transparent buttons (50% opacity) |
+| Near Black | #1A1A1A | Deep backgrounds, overlays, and high-contrast UI surfaces |
 
-### Semantic Colors
+There are no brand accent colors, gradients, or multi-hue schemes. All variation comes from opacity layering over black and white.
 
-| Name | Hex |
-|---|---|
-| Success | #39D98A |
-| Warning | #FFC857 |
-| Error | #FF5D5D |
-| Info | #3BA8FF |
-
-### Text Colors
-
-| Name | Value |
-|---|---|
-| Primary | #FFFFFF |
-| Secondary | rgba(255,255,255,0.72) |
-| Tertiary | rgba(255,255,255,0.48) |
-| Disabled | rgba(255,255,255,0.24) |
-| Text on Light | #111111 |
-
-### Surface Hierarchy
-
-| Name | Value |
-|---|---|
-| Background | #000000 |
-| Surface 1 | #111111 |
-| Surface 2 | #181818 |
-| Surface 3 | #202020 |
-| Floating Card | rgba(20,20,20,0.82) |
-| Glass Card | rgba(255,255,255,0.08) |
-
-## Gradients
-
-Gradients are as important as the individual colors in Eccillo's identity.
-
-**Hero Sky** — Used for hero sections and atmospheric backgrounds:
-linear-gradient(180deg, #6CBFFF 0%, #4AA2F4 45%, #2E7CCB 100%)
-
-**Copilot Aurora** — Used for AI copilot features, intelligence highlights, and high-energy moments:
-linear-gradient(135deg, #2E7BFF 0%, #6B55FF 30%, #C147FF 60%, #FF4F73 100%)
-
-**Glow Gradient** — Used for subtle UI glows, active button rings, and atmospheric circular halos:
-radial-gradient(circle, #FF5D9E 0%, #B64EFF 35%, #4169FF 70%, transparent 100%)
-
-## UI Elements
+## UI Elements — Pill-Shaped Interfaces & Glass Depth
 
 **Pill Buttons**
 - Corner radius: 114px–200px (fully rounded capsules)
-- Primary CTA: solid white fill (#FFFFFF), dark text (#111111)
-- Primary Hover: #F2F2F2
-- Secondary: rgba(255,255,255,0.08), white text
-- Secondary Hover: rgba(255,255,255,0.14)
-- AI Action: #A44EFF fill, white text
-- Focus Ring: #4FA7FF
+- Primary CTA: solid black fill (#000000), white text
+- Muted/Secondary: semi-transparent grey fill, establishing cognitive depth
+- The contrast between solid black and semi-transparent grey establishes clear hierarchy
 - Never use sharp or slightly rounded corners on buttons
 
 **Frosted Glass Inputs**
-- rgba(255,255,255,0.08) fill with backdrop-filter: blur(24px)
+- 55% opaque white fill with complex glass refraction and drop shadow
 - Ensures readability over deep, high-contrast imagery
+- Used for search fields, text inputs, and interactive form elements
 
-## Design Principles
+## Design Principles — Core Brand Philosophy
 
-1. **Atmospheric AI** — Black foundation, aurora personality. Blue signals planning and trust. Violet signals intelligence and AI. Pink signals creativity, celebration, and events.
-2. **The Capsule Aesthetic** — Buttons, inputs, and toggles always take organic capsule or circular shapes. Glass surfaces with backdrop blur create depth against structural grids.
-3. **Editorial Clarity** — Georgia Pro serif for emotional warmth, Helvetica Now Display for functional precision. White text on dark surfaces for maximum readability. Build hierarchy through the atmospheric palette, not opacity alone.
+1. **Editorial & Human-First** — Lead with sweeping, quiet serif typography and deep human imagery. The layout breathes through generous margins, mirroring premium print publications.
+2. **The Capsule Aesthetic** — Buttons, input forms, and status toggles always take organic capsule or circular shapes. These soft parameters contrast beautifully against structural grids.
+3. **Opacity as Hierarchy** — Do not add complex color schemes to build structure. Instead, alter opacity. Secondary elements, borders, and shadows rely on layered alphas over pure solid tones.

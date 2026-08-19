@@ -1,9 +1,20 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
-import { Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { AppShell } from "../components/AppShell";
+import { CapsuleButton, Chip, ProgressBar } from "../components/design/ds";
 import { planningApi } from "../api/planning";
+
+/* Step 1 of the AI setup flow: the brief. Everything after this is scaffolded by
+   the agent and verified one step at a time in EventSetupWizard. */
+
+const TEMPLATES = [
+  "Corporate conference",
+  "Product launch event",
+  "Annual company retreat",
+  "Charity fundraiser gala",
+];
 
 const EXAMPLES = [
   "A 200-person tech conference on 2026-09-15 in Kathmandu, budget 5,000,000, called DevWeek",
@@ -18,7 +29,7 @@ export function ConversationalIntake() {
   const create = useMutation({
     // Create a bare draft event; the agent fleshes it out from the description.
     mutationFn: (text: string) => planningApi.createEvent({ title: "New event", type: "other" }).then((event) => ({ event, text })),
-    onSuccess: ({ event, text }) => navigate("/events/" + event.id + "/copilot", { state: { intro: text } }),
+    onSuccess: ({ event, text }) => navigate("/events/" + event.id + "/setup", { state: { intro: text } }),
   });
 
   const submit = () => {
@@ -28,72 +39,78 @@ export function ConversationalIntake() {
 
   return (
     <AppShell title="New event">
-      <div className="mx-auto max-w-2xl pt-6 sm:pt-16">
-        <div className="text-center">
-          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-white/10">
-            <Sparkles size={26} className="text-white" />
+      <section className="mx-auto flex max-w-[var(--frame-app)] flex-col gap-8 rounded-[var(--radius-card-lg)] bg-[var(--bg)] p-6 shadow-[inset_0_0_0_1px_var(--ring)] sm:p-10">
+        <header className="flex flex-col gap-4 pb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span className="eccillo-label-caps">AI Setup Wizard · Step 1 of 6</span>
+            <h1 className="eccillo-card-title text-[var(--text)]">Get started</h1>
           </div>
-          <h1 className="font-editorial text-4xl leading-tight sm:text-5xl">Describe your event</h1>
-          <p className="mx-auto mt-4 max-w-lg text-white/60">
-            Tell the Copilot what you're planning — in a sentence or a paragraph. It'll ask for anything it needs, then build the whole plan with you.
+          <ProgressBar value={100 / 6} />
+        </header>
+
+        <div className="flex gap-4">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--accent)]">
+            <Sparkles size={16} className="text-[var(--onAccent)]" />
+          </span>
+          <p className="flex-1 rounded-[4px_16px_16px_16px] bg-[var(--panel)] p-5 font-[var(--font-data)] text-[16px] leading-6 text-[var(--text)]">
+            Tell me what you're planning in plain English. I'll scaffold the details, venue, agenda and budget — and we'll confirm each of them together, one step at a time, before anything is saved.
           </p>
         </div>
 
-        <div className="frosted mt-8 rounded-[28px] border border-white/20 p-3">
-          <textarea
-            autoFocus
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                e.preventDefault();
-                submit();
-              }
-            }}
-            rows={4}
-            placeholder="e.g. Plan a 200-person conference in Kathmandu on Sept 15, budget 5,000,000…"
-            className="min-h-32 w-full resize-none bg-transparent px-4 py-3 text-white outline-none placeholder:text-white/40"
-          />
-          <div className="flex items-center justify-between gap-3 px-2 pb-1">
-            <span className="text-xs text-white/40">⌘/Ctrl + Enter</span>
-            <button
-              type="button"
-              onClick={submit}
-              disabled={!prompt.trim() || create.isPending}
-              className="focus-ring inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm text-black transition disabled:opacity-40"
-            >
-              <Sparkles size={16} />
-              {create.isPending ? "Starting…" : "Start planning"}
-            </button>
+        <textarea
+          autoFocus
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault();
+              submit();
+            }
+          }}
+          placeholder='Type or paste your event description here. E.g. "We need a 3-day corporate conference for 500 attendees with breakout sessions, catering, and AV coordination…"'
+          className="focus-ring min-h-[150px] resize-none rounded-[var(--radius-card)] bg-[var(--cell)] p-6 font-[var(--font-data)] text-[16px] leading-[26px] text-[var(--text)] shadow-[inset_0_0_0_2px_var(--accent)] outline-none placeholder:text-[var(--text3)]"
+        />
+
+        <div className="flex flex-col gap-3">
+          <span className="eccillo-label-caps">Or select a popular template</span>
+          <div className="flex flex-wrap gap-2">
+            {TEMPLATES.map((label) => (
+              <Chip key={label} onClick={() => setPrompt(`Plan a ${label.toLowerCase()} for 500 attendees across 3 days.`)}>
+                {label}
+              </Chip>
+            ))}
           </div>
         </div>
 
-        {create.isError && (
-          <p className="mt-3 text-center text-sm text-red-300">
-            {create.error instanceof Error ? create.error.message : "Could not start. Please try again."}
-          </p>
-        )}
-
-        <div className="mt-6 flex flex-col gap-2">
+        <div className="flex flex-col gap-2">
           {EXAMPLES.map((ex) => (
             <button
               key={ex}
               type="button"
               onClick={() => setPrompt(ex)}
-              className="focus-ring surface rounded-2xl px-4 py-3 text-left text-sm text-white/80 transition hover:bg-white/10"
+              className="focus-ring rounded-[var(--radius-specimen)] bg-[var(--panel)] px-4 py-3 text-left font-[var(--font-data)] text-[13px] text-[var(--text2)] transition hover:opacity-[.82]"
             >
               {ex}
             </button>
           ))}
         </div>
 
-        <p className="mt-8 text-center text-sm text-white/45">
-          Prefer a form?{" "}
-          <Link to="/events/new/manual" className="focus-ring text-white/80 underline underline-offset-2">
-            Create manually
+        {create.isError && (
+          <p role="alert" className="font-[var(--font-data)] text-[13px] text-[var(--error)]">
+            {create.error instanceof Error ? create.error.message : "Could not start. Please try again."}
+          </p>
+        )}
+
+        <footer className="flex flex-wrap items-center justify-between gap-4 border-t border-[var(--line)] pt-6">
+          <Link to="/events/new/manual" className="focus-ring font-[var(--font-data)] text-[13px] text-[var(--text2)] underline underline-offset-4">
+            Prefer a form? Create manually
           </Link>
-        </p>
-      </div>
+          <CapsuleButton onClick={submit} disabled={!prompt.trim() || create.isPending}>
+            {create.isPending ? "Scaffolding…" : "Scaffold with AI"}
+            <ArrowRight size={14} />
+          </CapsuleButton>
+        </footer>
+      </section>
     </AppShell>
   );
 }
