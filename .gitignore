@@ -29,6 +29,7 @@ frontend/.vite/
 .idea/
 *.swp
 *.swo
+.agents
 
 # OS
 .DS_Store
